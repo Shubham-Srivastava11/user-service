@@ -1,18 +1,18 @@
 const express = require("express");
 const bodyParser = require("body-parser");
 const mysql = require("mysql2");
-const { CONFIG } = require("./config");
+const bcrypt = require("bcryptjs");
 
 const app = express();
-const port = 3000;
+const port = 3002;
 
 app.use(bodyParser.json());
 
 const pool = mysql.createPool({
-  host: CONFIG.host,
-  user: CONFIG.user,
-  password: CONFIG.password,
-  database: CONFIG.database,
+  host: "localhost",
+  user: "root",
+  password: "test",
+  database: "users",
   connectionLimit: 10,
 });
 
@@ -25,17 +25,37 @@ app.post("/register", (req, res) => {
   }
 
   pool.query(
-    "INSERT INTO userDetails (username, email, password) VALUES (?, ?, ?)",
-    [username, email, password],
+    "SELECT * FROM userDetails WHERE email = ?",
+    [email],
     (err, result) => {
       if (err) {
-        console.error("Error during registration:", err);
+        console.error("Error during login:", err);
         return res.status(500).json({ error: "Failed to register user." });
       }
+      if (result.length === 0) {
+        bcrypt.hash(password, 10, function (err, hash) {
+          pool.query(
+            "INSERT INTO userDetails (username, email, password) VALUES (?, ?, ?)",
+            [username, email, hash],
+            (err, result) => {
+              if (err) {
+                console.error("Error during registration:", err);
+                return res
+                  .status(500)
+                  .json({ error: "Failed to register user." });
+              }
 
-      return res
-        .status(201)
-        .json({ message: `${username} registered successfully.` });
+              return res
+                .status(201)
+                .json({ message: `${username} registered successfully.` });
+            }
+          );
+        });
+      } else {
+        return res
+          .status(400)
+          .json({ message: `${email} already registered.` });
+      }
     }
   );
 });
@@ -49,8 +69,8 @@ app.post("/login", (req, res) => {
   }
 
   pool.query(
-    "SELECT * FROM userDetails WHERE email = ? AND password = ?",
-    [email, password],
+    "SELECT password FROM userDetails WHERE email = ?",
+    [email],
     (err, result) => {
       if (err) {
         console.error("Error during login:", err);
@@ -58,12 +78,24 @@ app.post("/login", (req, res) => {
       }
 
       if (result.length === 0) {
-        return res.status(401).json({ error: "Invalid credentials." });
+        return res.status(401).json({ error: "Email not registered" });
       }
 
-      return res
-        .status(200)
-        .json({ message: "User authenticated successfully." });
+      bcrypt.compare(
+        password,
+        result[0].password,
+        async function (err, isMatch) {
+          if (isMatch) {
+            return res
+              .status(200)
+              .json({ message: "User authenticated successfully." });
+          }
+
+          if (!isMatch) {
+            return res.status(402).json({ error: "Invalid credentials." });
+          }
+        }
+      );
     }
   );
 });
