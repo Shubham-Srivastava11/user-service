@@ -12,15 +12,15 @@ const pool = mysql.createPool({
   host: "localhost",
   user: "root",
   password: "test",
-  database: "users",
+  database: "products",
   connectionLimit: 10,
 });
 
 // Route to register a new user
 app.post("/register", (req, res) => {
-  const { username, email, password } = req.body;
+  const { username, firstName, lastName, email, password } = req.body;
 
-  if (!username || !email || !password) {
+  if (!username || !email || !password || !firstName || !lastName) {
     return res.status(400).json({ error: "All fields are required." });
   }
 
@@ -35,8 +35,8 @@ app.post("/register", (req, res) => {
       if (result.length === 0) {
         bcrypt.hash(password, 10, function (err, hash) {
           pool.query(
-            "INSERT INTO userDetails (username, email, password) VALUES (?, ?, ?)",
-            [username, email, hash],
+            "INSERT INTO userDetails (username, firstName, lastName, email, password) VALUES (?, ?, ?, ?, ?)",
+            [username, firstName, lastName, email, hash],
             (err, result) => {
               if (err) {
                 console.error("Error during registration:", err);
