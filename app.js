@@ -21,7 +21,9 @@ app.post("/register", (req, res) => {
   const { username, firstName, lastName, email, password } = req.body;
 
   if (!username || !email || !password || !firstName || !lastName) {
-    return res.status(400).json({ error: "All fields are required." });
+    return res
+      .status(400)
+      .json({ status: 400, message: "All fields are required." });
   }
 
   pool.query(
@@ -29,8 +31,9 @@ app.post("/register", (req, res) => {
     [email],
     (err, result) => {
       if (err) {
-        console.error("Error during login:", err);
-        return res.status(500).json({ error: "Failed to register user." });
+        return res
+          .status(500)
+          .json({ status: 500, message: "Failed to register user." });
       }
       if (result.length === 0) {
         bcrypt.hash(password, 10, function (err, hash) {
@@ -42,19 +45,20 @@ app.post("/register", (req, res) => {
                 console.error("Error during registration:", err);
                 return res
                   .status(500)
-                  .json({ error: "Failed to register user." });
+                  .json({ status: 500, message: "Failed to register user." });
               }
 
-              return res
-                .status(201)
-                .json({ message: `${username} registered successfully.` });
+              return res.status(201).json({
+                status: 201,
+                message: `${username} registered successfully.`,
+              });
             }
           );
         });
       } else {
         return res
           .status(400)
-          .json({ message: `${email} already registered.` });
+          .json({ status: 400, message: `${email} already registered.` });
       }
     }
   );
@@ -65,7 +69,9 @@ app.post("/login", (req, res) => {
   const { email, password } = req.body;
 
   if (!email || !password) {
-    return res.status(400).json({ error: "Email and password are required." });
+    return res
+      .status(400)
+      .json({ status: 400, message: "Email and password are required." });
   }
 
   pool.query(
@@ -74,11 +80,15 @@ app.post("/login", (req, res) => {
     (err, result) => {
       if (err) {
         console.error("Error during login:", err);
-        return res.status(500).json({ error: "Failed to authenticate user." });
+        return res
+          .status(500)
+          .json({ status: 500, message: "Failed to authenticate user." });
       }
 
       if (result.length === 0) {
-        return res.status(401).json({ error: "Email not registered" });
+        return res
+          .status(401)
+          .json({ status: 401, message: "Email not registered" });
       }
 
       bcrypt.compare(
@@ -92,7 +102,9 @@ app.post("/login", (req, res) => {
           }
 
           if (!isMatch) {
-            return res.status(402).json({ error: "Invalid credentials." });
+            return res
+              .status(402)
+              .json({ status: 402, message: "Invalid credentials." });
           }
         }
       );
@@ -104,18 +116,21 @@ app.post("/login", (req, res) => {
 app.get("/profile/:email", (req, res) => {
   const { email } = req.params;
   pool.query(
-    "SELECT id, username, email FROM userDetails WHERE email = ?",
+    "SELECT userId, username, firstName, lastName, email FROM userDetails WHERE email = ?",
     [email],
     (err, result) => {
       if (err) {
         console.error("Error fetching user profile:", err);
-        return res.status(500).json({ error: "Failed to fetch user profile." });
+        return res
+          .status(500)
+          .json({ status: 500, message: "Failed to fetch user profile." });
       }
 
       if (result.length === 0) {
-        return res
-          .status(404)
-          .json({ error: `User with email - ${email} not found.` });
+        return res.status(404).json({
+          status: 404,
+          message: `User with email - ${email} not found.`,
+        });
       }
 
       return res.status(200).json(result[0]);
